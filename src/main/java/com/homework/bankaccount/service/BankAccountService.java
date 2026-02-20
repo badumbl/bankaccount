@@ -12,7 +12,6 @@ import com.homework.bankaccount.httpclient.response.ExternalSystemResponse;
 import com.homework.bankaccount.mapper.BalanceMapper;
 import com.homework.bankaccount.repository.BalanceRepository;
 import com.homework.bankaccount.repository.BankAccountRepository;
-import com.homework.bankaccount.request.CreateAccountRequest;
 import com.homework.bankaccount.request.MoneyRequest;
 import com.homework.bankaccount.response.BalanceResponse;
 import jakarta.transaction.Transactional;
@@ -41,31 +40,15 @@ public class BankAccountService {
   private final ExternalSystemRestClient externalSystemRestClient;
   private final BalanceMapper balanceMapper;
 
-  private static BalanceEntity getOrCreateBalance(
-      BankAccountEntity account, Map<Currency, BalanceEntity> balances, Currency currency) {
-
-    BalanceEntity existing = balances.get(currency);
-    if (existing != null) {
-      return existing;
-    }
-
-    BalanceEntity created = new BalanceEntity();
-    created.setCurrency(currency);
-    created.setBankAccount(account);
-    account.getBalances().add(created);
-    balances.put(currency, created);
-    return created;
-  }
-
   private BankAccountEntity getBankAccount(Long bankAccountId) {
     return bankAccountRepository
         .findById(bankAccountId)
         .orElseThrow(() -> new NotFoundException("Bank account not found: " + bankAccountId));
   }
 
-  public BankAccountEntity createAccount(CreateAccountRequest request) {
+  public BankAccountEntity createAccount(String name) {
     BankAccountEntity bankAccountEntity = new BankAccountEntity();
-    bankAccountEntity.setName(request.getName());
+    bankAccountEntity.setName(name);
     return bankAccountRepository.save(bankAccountEntity);
   }
 
@@ -149,6 +132,22 @@ public class BankAccountService {
 
     toBalance.setAmount(toBalance.getAmount().add(target).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.saveAll(List.of(fromBalance, toBalance));
+  }
+
+  private static BalanceEntity getOrCreateBalance(
+          BankAccountEntity account, Map<Currency, BalanceEntity> balances, Currency currency) {
+
+    BalanceEntity existing = balances.get(currency);
+    if (existing != null) {
+      return existing;
+    }
+
+    BalanceEntity created = new BalanceEntity();
+    created.setCurrency(currency);
+    created.setBankAccount(account);
+    account.getBalances().add(created);
+    balances.put(currency, created);
+    return created;
   }
 
   private BigDecimal toEur(BigDecimal amount, Currency from) {

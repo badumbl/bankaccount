@@ -21,7 +21,7 @@ public class BankAccountController {
 
   @PostMapping()
   public ResponseEntity<?> createAccount(@Valid @RequestBody CreateAccountRequest request) {
-    BankAccountEntity account = bankAccountService.createAccount(request);
+    BankAccountEntity account = bankAccountService.createAccount(request.getName());
     return ResponseEntity.ok(account.getId());
   }
 

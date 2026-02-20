@@ -20,7 +20,7 @@ class BalanceMapperTest {
 
     BalanceResponse balanceResponse = balanceMapper.toResponse(balanceEntity);
 
-    assertEquals(new BigDecimal("100"), balanceResponse.getBalance());
-    assertEquals(Currency.EUR, balanceResponse.getCurrency());
+    assertEquals(new BigDecimal("100"), balanceResponse.balance());
+    assertEquals(Currency.EUR, balanceResponse.currency());
   }
 }

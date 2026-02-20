@@ -62,9 +62,7 @@ class BankAccountServiceTest {
 
   @Test
   void shouldAddMoneyAndCreateBalance() {
-    MoneyRequest moneyRequest = new MoneyRequest();
-    moneyRequest.setAmount(new BigDecimal("100"));
-    moneyRequest.setCurrency(Currency.EUR);
+    MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
     bankAccountService.addMoney(1L, moneyRequest);
@@ -80,9 +78,7 @@ class BankAccountServiceTest {
 
   @Test
   void shouldAddMoneyToExistingBalance() {
-    MoneyRequest moneyRequest = new MoneyRequest();
-    moneyRequest.setAmount(new BigDecimal("100"));
-    moneyRequest.setCurrency(Currency.EUR);
+    MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
     balance.setCurrency(Currency.EUR);
@@ -98,7 +94,7 @@ class BankAccountServiceTest {
 
   @Test
   void addMoneyShouldThrowNotFoundWhenAccountDoesNotExist() {
-    MoneyRequest moneyRequest = new MoneyRequest();
+    MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.empty());
 
     assertThrows(NotFoundException.class, () -> bankAccountService.addMoney(1L, moneyRequest));
@@ -107,9 +103,7 @@ class BankAccountServiceTest {
 
   @Test
   void shouldDebitMoney() {
-    MoneyRequest request = new MoneyRequest();
-    request.setAmount(new BigDecimal("50"));
-    request.setCurrency(Currency.EUR);
+    MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
     balance.setCurrency(Currency.EUR);
@@ -129,7 +123,7 @@ class BankAccountServiceTest {
 
   @Test
   void debitMoneyShouldThrowNotFoundWhenAccountDoesNotExist() {
-    MoneyRequest request = new MoneyRequest();
+    MoneyRequest request = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.empty());
 
     assertThrows(NotFoundException.class, () -> bankAccountService.debitMoney(1L, request));
@@ -137,8 +131,7 @@ class BankAccountServiceTest {
 
   @Test
   void debitMoneyShouldThrowNotFoundWhenCurrencyDoesNotExist() {
-    MoneyRequest request = new MoneyRequest();
-    request.setCurrency(Currency.USD);
+    MoneyRequest request = new MoneyRequest(new BigDecimal("100"), Currency.USD);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
 
@@ -147,9 +140,7 @@ class BankAccountServiceTest {
 
   @Test
   void debitMoneyShouldThrowInsufficientFunds() {
-    MoneyRequest request = new MoneyRequest();
-    request.setAmount(new BigDecimal("150"));
-    request.setCurrency(Currency.EUR);
+    MoneyRequest request = new MoneyRequest(new BigDecimal("150"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
     balance.setCurrency(Currency.EUR);
@@ -164,9 +155,7 @@ class BankAccountServiceTest {
 
   @Test
   void debitMoneyShouldThrowExternalSystemUnavailable() {
-    MoneyRequest request = new MoneyRequest();
-    request.setAmount(new BigDecimal("50"));
-    request.setCurrency(Currency.EUR);
+    MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
     balance.setCurrency(Currency.EUR);
@@ -189,9 +178,7 @@ class BankAccountServiceTest {
     balance.setAmount(new BigDecimal("100"));
     bankAccountEntity.setBalances(List.of(balance));
 
-    BalanceResponse response = new BalanceResponse();
-    response.setCurrency(Currency.EUR);
-    response.setBalance(new BigDecimal("100"));
+    BalanceResponse response = new BalanceResponse(new BigDecimal("100"), Currency.EUR);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
     when(balanceMapper.toResponse(balance)).thenReturn(response);
@@ -199,8 +186,8 @@ class BankAccountServiceTest {
     List<BalanceResponse> results = bankAccountService.getBalance(1L);
 
     assertEquals(1, results.size());
-    assertEquals(Currency.EUR, results.getFirst().getCurrency());
-    assertEquals(new BigDecimal("100"), results.getFirst().getBalance());
+    assertEquals(Currency.EUR, results.getFirst().currency());
+    assertEquals(new BigDecimal("100"), results.getFirst().balance());
   }
 
   @Test

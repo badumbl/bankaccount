@@ -8,9 +8,6 @@ import org.springframework.stereotype.Component;
 public class BalanceMapper {
 
   public BalanceResponse toResponse(BalanceEntity balanceEntity) {
-    return BalanceResponse.builder()
-        .balance(balanceEntity.getAmount())
-        .currency(balanceEntity.getCurrency())
-        .build();
+    return new BalanceResponse(balanceEntity.getAmount(), balanceEntity.getCurrency());
   }
 }

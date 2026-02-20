@@ -21,7 +21,7 @@ public class BankAccountController {
 
   @PostMapping()
   public ResponseEntity<?> createAccount(@Valid @RequestBody CreateAccountRequest request) {
-    BankAccountEntity account = bankAccountService.createAccount(request.getName());
+    BankAccountEntity account = bankAccountService.createAccount(request.name());
     return ResponseEntity.ok(account.getId());
   }
 
@@ -49,7 +49,7 @@ public class BankAccountController {
   public ResponseEntity<?> getCurrencyExchange(
       @PathVariable Long id, @Valid @RequestBody CurrencyExchangeRequest request) {
     bankAccountService.exchangeCurrency(
-        id, request.getFromCurrency(), request.getToCurrency(), request.getAmount());
+        id, request.fromCurrency(), request.toCurrency(), request.amount());
     return ResponseEntity.ok().build();
   }
 }

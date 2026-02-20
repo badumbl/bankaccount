@@ -40,8 +40,7 @@ class BankAccountControllerTest {
     bankAccountEntity.setId(1L);
     bankAccountEntity.setName("test");
 
-    CreateAccountRequest createAccountRequest = new CreateAccountRequest();
-    createAccountRequest.setName("test");
+    CreateAccountRequest createAccountRequest = new CreateAccountRequest("test");
 
     when(bankAccountService.createAccount("test")).thenReturn(bankAccountEntity);
 
@@ -58,9 +57,7 @@ class BankAccountControllerTest {
 
   @Test
   void shouldAddMoney() throws Exception {
-    MoneyRequest moneyRequest = new MoneyRequest();
-    moneyRequest.setAmount(new BigDecimal("100"));
-    moneyRequest.setCurrency(Currency.EUR);
+    MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
 
     mockMvc
         .perform(
@@ -74,9 +71,7 @@ class BankAccountControllerTest {
 
   @Test
   void shouldDebitMoney() throws Exception {
-    MoneyRequest moneyRequest = new MoneyRequest();
-    moneyRequest.setAmount(new BigDecimal("99"));
-    moneyRequest.setCurrency(Currency.EUR);
+    MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("99"), Currency.EUR);
 
     mockMvc
         .perform(
@@ -105,10 +100,8 @@ class BankAccountControllerTest {
 
   @Test
   void shouldExchangeCurrency() throws Exception {
-    CurrencyExchangeRequest currencyExchangeRequest = new CurrencyExchangeRequest();
-    currencyExchangeRequest.setFromCurrency(Currency.EUR);
-    currencyExchangeRequest.setToCurrency(Currency.USD);
-    currencyExchangeRequest.setAmount(new BigDecimal("100"));
+    CurrencyExchangeRequest currencyExchangeRequest =
+        new CurrencyExchangeRequest(Currency.EUR, Currency.USD, new BigDecimal("100"));
 
     mockMvc
         .perform(

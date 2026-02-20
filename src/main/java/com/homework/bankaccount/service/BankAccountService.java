@@ -58,19 +58,19 @@ public class BankAccountService {
 
     BalanceEntity balanceEntity =
         bankAccountEntity.getBalances().stream()
-            .filter(balance -> balance.getCurrency().equals(request.getCurrency()))
+            .filter(balance -> balance.getCurrency().equals(request.currency()))
             .findFirst()
             .orElseGet(
                 () -> {
                   BalanceEntity balance = new BalanceEntity();
-                  balance.setCurrency(request.getCurrency());
+                  balance.setCurrency(request.currency());
                   balance.setBankAccount(bankAccountEntity);
                   balance.setAmount(BigDecimal.ZERO);
                   return balance;
                 });
 
     balanceEntity.setAmount(
-        balanceEntity.getAmount().add(request.getAmount()).setScale(4, RoundingMode.HALF_UP));
+        balanceEntity.getAmount().add(request.amount()).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.save(balanceEntity);
   }
 
@@ -80,11 +80,11 @@ public class BankAccountService {
 
     BalanceEntity balanceEntity =
         bankAccountEntity.getBalances().stream()
-            .filter(balance -> balance.getCurrency().equals(request.getCurrency()))
+            .filter(balance -> balance.getCurrency().equals(request.currency()))
             .findFirst()
-            .orElseThrow(() -> new NotFoundException("Currency not found: " + request.getCurrency()));
+            .orElseThrow(() -> new NotFoundException("Currency not found: " + request.currency()));
 
-    if (balanceEntity.getAmount().compareTo(request.getAmount()) < 0) {
+    if (balanceEntity.getAmount().compareTo(request.amount()) < 0) {
       throw new InsufficientFundsException("Insufficient funds for debit");
     }
 
@@ -95,7 +95,7 @@ public class BankAccountService {
     }
 
     balanceEntity.setAmount(
-        balanceEntity.getAmount().subtract(request.getAmount()).setScale(4, RoundingMode.HALF_UP));
+        balanceEntity.getAmount().subtract(request.amount()).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.save(balanceEntity);
   }
 

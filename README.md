@@ -4,7 +4,7 @@ currency exchange.
 ### Technologies Used
 
 - **Java 21**
-- **Spring Boot 4.0.2**
+- **Spring Boot 4.0.3**
 - **Spring Data JPA**
 - **Liquibase** (Database migrations)
 - **PostgreSQL**

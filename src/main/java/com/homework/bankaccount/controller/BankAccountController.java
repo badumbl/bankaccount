@@ -46,7 +46,7 @@ public class BankAccountController {
   }
 
   @PostMapping("/{id}/currency")
-  public ResponseEntity<?> getCurrencyExchange(
+  public ResponseEntity<?> currencyExchange(
       @PathVariable Long id, @Valid @RequestBody CurrencyExchangeRequest request) {
     bankAccountService.exchangeCurrency(
         id, request.fromCurrency(), request.toCurrency(), request.amount());

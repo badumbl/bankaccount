@@ -38,6 +38,7 @@ class BankAccountServiceTest {
   @Mock private BalanceRepository balanceRepository;
   @Mock private ExternalSystemRestClient externalSystemRestClient;
   @Mock private BalanceMapper balanceMapper;
+  @Mock private CurrencyRateService currencyRateService;
   @InjectMocks private BankAccountService bankAccountService;
 
   private BankAccountEntity bankAccountEntity;
@@ -210,12 +211,13 @@ class BankAccountServiceTest {
     bankAccountEntity.getBalances().addAll(List.of(fromBalance, toBalance));
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(currencyRateService.getRate(Currency.USD, Currency.EUR)).thenReturn(new BigDecimal("0.87"));
 
     bankAccountService.exchangeCurrency(1L, Currency.USD, Currency.EUR, new BigDecimal("10"));
 
-    // USD rate to EUR is 0.85. 10 USD * 0.85 = 8.5 EUR
+    // USD rate to EUR is 0.87. 10 USD * 0.87 = 8.7 EUR
     assertEquals(new BigDecimal("90.0000"), fromBalance.getAmount());
-    assertEquals(new BigDecimal("58.5000"), toBalance.getAmount());
+    assertEquals(new BigDecimal("58.7000"), toBalance.getAmount());
     verify(balanceRepository).saveAll(any());
   }
 
@@ -227,10 +229,11 @@ class BankAccountServiceTest {
     bankAccountEntity.getBalances().add(fromBalance);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(currencyRateService.getRate(Currency.EUR, Currency.USD)).thenReturn(new BigDecimal("1.15"));
 
     bankAccountService.exchangeCurrency(1L, Currency.EUR, Currency.USD, new BigDecimal("8.5"));
 
-    // EUR to USD rate: toEur is 1. fromEur for USD is amount / 0.85
+    // EUR to USD rate: toEur is 1.15 fromEur for USD is amount / 0.85
     // 8.5 EUR -> 8.5 / 0.85 = 10 USD
     assertEquals(new BigDecimal("91.5000"), fromBalance.getAmount());
 
@@ -244,7 +247,7 @@ class BankAccountServiceTest {
             .filter(b -> b.getCurrency().equals(Currency.USD))
             .findFirst()
             .orElseThrow();
-    assertEquals(new BigDecimal("10.0000"), savedToBalance.getAmount());
+    assertEquals(new BigDecimal("9.7750"), savedToBalance.getAmount());
   }
 
   @Test

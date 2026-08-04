@@ -3,7 +3,6 @@ package com.homework.bankaccount.service;
 import com.homework.bankaccount.entities.BalanceEntity;
 import com.homework.bankaccount.entities.BankAccountEntity;
 import com.homework.bankaccount.enums.Currency;
-import com.homework.bankaccount.exception.BadRequestException;
 import com.homework.bankaccount.exception.ExternalSystemUnavailableException;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
@@ -19,7 +18,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -29,16 +27,11 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class BankAccountService {
 
-  private static final Map<Currency, BigDecimal> TO_EUR =
-      Map.of(
-          Currency.EUR, BigDecimal.ONE,
-          Currency.USD, new BigDecimal("0.85"),
-          Currency.SEK, new BigDecimal("0.094"),
-          Currency.GBP, new BigDecimal("1.15"));
   private final BankAccountRepository bankAccountRepository;
   private final BalanceRepository balanceRepository;
   private final ExternalSystemRestClient externalSystemRestClient;
   private final BalanceMapper balanceMapper;
+  private final CurrencyRateService currencyRateService;
 
   private BankAccountEntity getBankAccount(Long bankAccountId) {
     return bankAccountRepository
@@ -127,8 +120,8 @@ public class BankAccountService {
     fromBalance.setAmount(
         fromBalance.getAmount().subtract(amount).setScale(4, RoundingMode.HALF_UP));
 
-    BigDecimal eur = toEur(amount, fromCurrency);
-    BigDecimal target = fromEur(eur, toCurrency).setScale(4, RoundingMode.HALF_UP);
+    BigDecimal rate = currencyRateService.getRate(fromCurrency, toCurrency);
+    BigDecimal target = amount.multiply(rate).setScale(4, RoundingMode.HALF_UP);
 
     toBalance.setAmount(toBalance.getAmount().add(target).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.saveAll(List.of(fromBalance, toBalance));
@@ -148,19 +141,5 @@ public class BankAccountService {
     account.getBalances().add(created);
     balances.put(currency, created);
     return created;
-  }
-
-  private BigDecimal toEur(BigDecimal amount, Currency from) {
-    BigDecimal rate =
-        Optional.ofNullable(TO_EUR.get(from))
-            .orElseThrow(() -> new BadRequestException("Unsupported currency: " + from));
-    return amount.multiply(rate);
-  }
-
-  private BigDecimal fromEur(BigDecimal amountEur, Currency to) {
-    BigDecimal toRateEur =
-        Optional.ofNullable(TO_EUR.get(to))
-            .orElseThrow(() -> new BadRequestException("Unsupported currency: " + to));
-    return amountEur.divide(toRateEur, 8, RoundingMode.HALF_UP);
   }
 }

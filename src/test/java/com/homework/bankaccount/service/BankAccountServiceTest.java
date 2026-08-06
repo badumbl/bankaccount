@@ -1,8 +1,6 @@
 package com.homework.bankaccount.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -10,18 +8,24 @@ import static org.mockito.Mockito.when;
 
 import com.homework.bankaccount.entities.BalanceEntity;
 import com.homework.bankaccount.entities.BankAccountEntity;
+import com.homework.bankaccount.entities.TransactionEntity;
 import com.homework.bankaccount.enums.Currency;
+import com.homework.bankaccount.enums.TransactionType;
 import com.homework.bankaccount.exception.ExternalSystemUnavailableException;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
 import com.homework.bankaccount.httpclient.ExternalSystemRestClient;
 import com.homework.bankaccount.httpclient.response.ExternalSystemResponse;
 import com.homework.bankaccount.mapper.BalanceMapper;
+import com.homework.bankaccount.mapper.TransactionMapper;
 import com.homework.bankaccount.repository.BalanceRepository;
 import com.homework.bankaccount.repository.BankAccountRepository;
+import com.homework.bankaccount.repository.TransactionRepository;
 import com.homework.bankaccount.request.MoneyRequest;
 import com.homework.bankaccount.response.BalanceResponse;
+import com.homework.bankaccount.response.TransactionResponse;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,9 +40,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BankAccountServiceTest {
   @Mock private BankAccountRepository bankAccountRepository;
   @Mock private BalanceRepository balanceRepository;
+  @Mock private TransactionRepository transactionRepository;
   @Mock private ExternalSystemRestClient externalSystemRestClient;
   @Mock private BalanceMapper balanceMapper;
   @Mock private CurrencyRateService currencyRateService;
+  @Mock private TransactionMapper transactionMapper;
   @InjectMocks private BankAccountService bankAccountService;
 
   private BankAccountEntity bankAccountEntity;
@@ -66,6 +72,8 @@ class BankAccountServiceTest {
     MoneyRequest moneyRequest = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(transactionRepository.save(any(TransactionEntity.class)))
+        .thenReturn(new TransactionEntity());
     bankAccountService.addMoney(1L, moneyRequest);
 
     ArgumentCaptor<BalanceEntity> balanceCaptor = ArgumentCaptor.forClass(BalanceEntity.class);
@@ -87,6 +95,8 @@ class BankAccountServiceTest {
     bankAccountEntity.getBalances().add(balance);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(transactionRepository.save(any(TransactionEntity.class)))
+        .thenReturn(new TransactionEntity());
     bankAccountService.addMoney(1L, moneyRequest);
 
     assertEquals(new BigDecimal("150.0000"), balance.getAmount());
@@ -103,7 +113,7 @@ class BankAccountServiceTest {
   }
 
   @Test
-  void shouldDebitMoney() {
+  void shouldWithdrawMoney() {
     MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
@@ -115,32 +125,34 @@ class BankAccountServiceTest {
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
     when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
+    when(transactionRepository.save(any(TransactionEntity.class)))
+        .thenReturn(new TransactionEntity());
 
-    bankAccountService.debitMoney(1L, request);
+    bankAccountService.withdrawMoney(1L, request);
 
     assertEquals(new BigDecimal("50.0000"), balance.getAmount());
     verify(balanceRepository).save(balance);
   }
 
   @Test
-  void debitMoneyShouldThrowNotFoundWhenAccountDoesNotExist() {
+  void withdrawMoneyShouldThrowNotFoundWhenAccountDoesNotExist() {
     MoneyRequest request = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.empty());
 
-    assertThrows(NotFoundException.class, () -> bankAccountService.debitMoney(1L, request));
+    assertThrows(NotFoundException.class, () -> bankAccountService.withdrawMoney(1L, request));
   }
 
   @Test
-  void debitMoneyShouldThrowNotFoundWhenCurrencyDoesNotExist() {
+  void withdrawMoneyShouldThrowNotFoundWhenCurrencyDoesNotExist() {
     MoneyRequest request = new MoneyRequest(new BigDecimal("100"), Currency.USD);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
 
-    assertThrows(NotFoundException.class, () -> bankAccountService.debitMoney(1L, request));
+    assertThrows(NotFoundException.class, () -> bankAccountService.withdrawMoney(1L, request));
   }
 
   @Test
-  void debitMoneyShouldThrowInsufficientFunds() {
+  void withdrawMoneyShouldThrowInsufficientFunds() {
     MoneyRequest request = new MoneyRequest(new BigDecimal("150"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
@@ -151,11 +163,11 @@ class BankAccountServiceTest {
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
 
     assertThrows(
-        InsufficientFundsException.class, () -> bankAccountService.debitMoney(1L, request));
+        InsufficientFundsException.class, () -> bankAccountService.withdrawMoney(1L, request));
   }
 
   @Test
-  void debitMoneyShouldThrowExternalSystemUnavailable() {
+  void withdrawMoneyShouldThrowExternalSystemUnavailable() {
     MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
 
     BalanceEntity balance = new BalanceEntity();
@@ -169,7 +181,8 @@ class BankAccountServiceTest {
     when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
 
     assertThrows(
-        ExternalSystemUnavailableException.class, () -> bankAccountService.debitMoney(1L, request));
+        ExternalSystemUnavailableException.class,
+        () -> bankAccountService.withdrawMoney(1L, request));
   }
 
   @Test
@@ -211,7 +224,10 @@ class BankAccountServiceTest {
     bankAccountEntity.getBalances().addAll(List.of(fromBalance, toBalance));
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
-    when(currencyRateService.getRate(Currency.USD, Currency.EUR)).thenReturn(new BigDecimal("0.87"));
+    when(currencyRateService.getRate(Currency.USD, Currency.EUR))
+        .thenReturn(new BigDecimal("0.87"));
+    when(transactionRepository.save(any(TransactionEntity.class)))
+        .thenReturn(new TransactionEntity());
 
     bankAccountService.exchangeCurrency(1L, Currency.USD, Currency.EUR, new BigDecimal("10"));
 
@@ -229,7 +245,10 @@ class BankAccountServiceTest {
     bankAccountEntity.getBalances().add(fromBalance);
 
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
-    when(currencyRateService.getRate(Currency.EUR, Currency.USD)).thenReturn(new BigDecimal("1.15"));
+    when(currencyRateService.getRate(Currency.EUR, Currency.USD))
+        .thenReturn(new BigDecimal("1.15"));
+    when(transactionRepository.save(any(TransactionEntity.class)))
+        .thenReturn(new TransactionEntity());
 
     bankAccountService.exchangeCurrency(1L, Currency.EUR, Currency.USD, new BigDecimal("8.5"));
 
@@ -270,5 +289,27 @@ class BankAccountServiceTest {
         () ->
             bankAccountService.exchangeCurrency(
                 1L, Currency.EUR, Currency.USD, new BigDecimal("100")));
+  }
+
+  @Test
+  void shouldGetTransactions() {
+    TransactionResponse transactionResponse =
+        new TransactionResponse(
+            1L,
+            TransactionType.EXCHANGE,
+            new BigDecimal("100"),
+            Currency.EUR,
+            new BigDecimal("100"),
+            Currency.EUR,
+            Instant.now());
+    when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(transactionRepository.findByBankAccountIdOrderByCreatedAtDesc(1L))
+        .thenReturn(List.of(new TransactionEntity()));
+    when(transactionMapper.toResponse(any(TransactionEntity.class)))
+        .thenReturn(transactionResponse);
+
+    List<TransactionResponse> transactions = bankAccountService.getTransactions(1L);
+    assertEquals(1, transactions.size());
+    assertSame(transactionResponse, transactions.get(0));
   }
 }

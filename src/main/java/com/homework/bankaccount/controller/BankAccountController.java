@@ -5,6 +5,7 @@ import com.homework.bankaccount.request.CreateAccountRequest;
 import com.homework.bankaccount.request.CurrencyExchangeRequest;
 import com.homework.bankaccount.request.MoneyRequest;
 import com.homework.bankaccount.response.BalanceResponse;
+import com.homework.bankaccount.response.TransactionResponse;
 import com.homework.bankaccount.service.BankAccountService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,10 +33,10 @@ public class BankAccountController {
     return ResponseEntity.ok().build();
   }
 
-  @PostMapping(value = "/{id}/debit")
-  public ResponseEntity<?> debitMoney(
+  @PostMapping(value = "/{id}/withdraw")
+  public ResponseEntity<?> withdrawMoney(
       @PathVariable Long id, @Valid @RequestBody MoneyRequest request) {
-    bankAccountService.debitMoney(id, request);
+    bankAccountService.withdrawMoney(id, request);
     return ResponseEntity.ok().build();
   }
 
@@ -52,4 +53,11 @@ public class BankAccountController {
         id, request.fromCurrency(), request.toCurrency(), request.amount());
     return ResponseEntity.ok().build();
   }
+
+  @GetMapping("/{id}/transactions")
+  public ResponseEntity<List<TransactionResponse>> getTransactions(@PathVariable Long id) {
+    List<TransactionResponse> transactions = bankAccountService.getTransactions(id);
+    return ResponseEntity.ok(transactions);
+  }
+
 }

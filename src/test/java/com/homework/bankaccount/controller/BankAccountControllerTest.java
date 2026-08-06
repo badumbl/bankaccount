@@ -75,12 +75,12 @@ class BankAccountControllerTest {
 
     mockMvc
         .perform(
-            post("/api/v1/bankaccount/1/debit")
+            post("/api/v1/bankaccount/1/withdraw")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(moneyRequest)))
         .andExpect(status().isOk());
 
-    verify(bankAccountService).debitMoney(1L, moneyRequest);
+    verify(bankAccountService).withdrawMoney(1L, moneyRequest);
   }
 
   @Test
@@ -111,5 +111,11 @@ class BankAccountControllerTest {
 
     verify(bankAccountService)
         .exchangeCurrency(1L, Currency.EUR, Currency.USD, new BigDecimal("100"));
+  }
+
+  @Test
+  void shouldGetTransactions() throws Exception {
+    mockMvc.perform(get("/api/v1/bankaccount/1/transactions")).andExpect(status().isOk());
+    verify(bankAccountService).getTransactions(1L);
   }
 }

@@ -2,17 +2,22 @@ package com.homework.bankaccount.service;
 
 import com.homework.bankaccount.entities.BalanceEntity;
 import com.homework.bankaccount.entities.BankAccountEntity;
+import com.homework.bankaccount.entities.TransactionEntity;
 import com.homework.bankaccount.enums.Currency;
+import com.homework.bankaccount.enums.TransactionType;
 import com.homework.bankaccount.exception.ExternalSystemUnavailableException;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
 import com.homework.bankaccount.httpclient.ExternalSystemRestClient;
 import com.homework.bankaccount.httpclient.response.ExternalSystemResponse;
 import com.homework.bankaccount.mapper.BalanceMapper;
+import com.homework.bankaccount.mapper.TransactionMapper;
 import com.homework.bankaccount.repository.BalanceRepository;
 import com.homework.bankaccount.repository.BankAccountRepository;
+import com.homework.bankaccount.repository.TransactionRepository;
 import com.homework.bankaccount.request.MoneyRequest;
 import com.homework.bankaccount.response.BalanceResponse;
+import com.homework.bankaccount.response.TransactionResponse;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -29,9 +34,11 @@ public class BankAccountService {
 
   private final BankAccountRepository bankAccountRepository;
   private final BalanceRepository balanceRepository;
+  private final TransactionRepository transactionRepository;
   private final ExternalSystemRestClient externalSystemRestClient;
   private final BalanceMapper balanceMapper;
   private final CurrencyRateService currencyRateService;
+  private final TransactionMapper transactionMapper;
 
   private BankAccountEntity getBankAccount(Long bankAccountId) {
     return bankAccountRepository
@@ -65,10 +72,18 @@ public class BankAccountService {
     balanceEntity.setAmount(
         balanceEntity.getAmount().add(request.amount()).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.save(balanceEntity);
+
+    saveTransaction(
+        bankAccountEntity,
+        TransactionType.DEPOSIT,
+        request.amount(),
+        request.currency(),
+        null,
+        null);
   }
 
   @Transactional
-  public void debitMoney(Long bankAccountId, MoneyRequest request) {
+  public void withdrawMoney(Long bankAccountId, MoneyRequest request) {
     BankAccountEntity bankAccountEntity = getBankAccount(bankAccountId);
 
     BalanceEntity balanceEntity =
@@ -90,6 +105,14 @@ public class BankAccountService {
     balanceEntity.setAmount(
         balanceEntity.getAmount().subtract(request.amount()).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.save(balanceEntity);
+
+    saveTransaction(
+        bankAccountEntity,
+        TransactionType.WITHDRAWAL,
+        request.amount(),
+        request.currency(),
+        null,
+        null);
   }
 
   public List<BalanceResponse> getBalance(Long bankAccountId) {
@@ -125,10 +148,38 @@ public class BankAccountService {
 
     toBalance.setAmount(toBalance.getAmount().add(target).setScale(4, RoundingMode.HALF_UP));
     balanceRepository.saveAll(List.of(fromBalance, toBalance));
+
+    saveTransaction(
+        bankAccountEntity, TransactionType.EXCHANGE, amount, fromCurrency, target, toCurrency);
+  }
+
+  public List<TransactionResponse> getTransactions(Long bankAccountId) {
+    // check if a bank account exists
+    getBankAccount(bankAccountId);
+    return transactionRepository.findByBankAccountIdOrderByCreatedAtDesc(bankAccountId).stream()
+        .map(transactionMapper::toResponse)
+        .toList();
+  }
+
+  private void saveTransaction(
+      BankAccountEntity bankAccountEntity,
+      TransactionType type,
+      BigDecimal amount,
+      Currency currency,
+      BigDecimal targetAmount,
+      Currency targetCurrency) {
+    TransactionEntity transactionEntity = new TransactionEntity();
+    transactionEntity.setBankAccount(bankAccountEntity);
+    transactionEntity.setType(type);
+    transactionEntity.setAmount(amount);
+    transactionEntity.setCurrency(currency);
+    transactionEntity.setTargetAmount(targetAmount);
+    transactionEntity.setTargetCurrency(targetCurrency);
+    transactionRepository.save(transactionEntity);
   }
 
   private static BalanceEntity getOrCreateBalance(
-          BankAccountEntity account, Map<Currency, BalanceEntity> balances, Currency currency) {
+      BankAccountEntity account, Map<Currency, BalanceEntity> balances, Currency currency) {
 
     BalanceEntity existing = balances.get(currency);
     if (existing != null) {

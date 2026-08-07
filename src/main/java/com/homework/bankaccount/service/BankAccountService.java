@@ -5,11 +5,8 @@ import com.homework.bankaccount.entities.BankAccountEntity;
 import com.homework.bankaccount.entities.TransactionEntity;
 import com.homework.bankaccount.enums.Currency;
 import com.homework.bankaccount.enums.TransactionType;
-import com.homework.bankaccount.exception.ExternalSystemUnavailableException;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
-import com.homework.bankaccount.httpclient.ExternalSystemRestClient;
-import com.homework.bankaccount.httpclient.response.ExternalSystemResponse;
 import com.homework.bankaccount.mapper.BalanceMapper;
 import com.homework.bankaccount.mapper.TransactionMapper;
 import com.homework.bankaccount.repository.BalanceRepository;
@@ -35,7 +32,6 @@ public class BankAccountService {
   private final BankAccountRepository bankAccountRepository;
   private final BalanceRepository balanceRepository;
   private final TransactionRepository transactionRepository;
-  private final ExternalSystemRestClient externalSystemRestClient;
   private final BalanceMapper balanceMapper;
   private final CurrencyRateService currencyRateService;
   private final TransactionMapper transactionMapper;
@@ -94,12 +90,6 @@ public class BankAccountService {
 
     if (balanceEntity.getAmount().compareTo(request.amount()) < 0) {
       throw new InsufficientFundsException("Insufficient funds for debit");
-    }
-
-    ExternalSystemResponse externalSystemResponse =
-        externalSystemRestClient.getExternalSystemResponse();
-    if (externalSystemResponse.getCode() != 200) {
-      throw new ExternalSystemUnavailableException(externalSystemResponse.getDescription());
     }
 
     balanceEntity.setAmount(

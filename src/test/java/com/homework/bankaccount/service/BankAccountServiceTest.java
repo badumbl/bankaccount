@@ -2,6 +2,7 @@ package com.homework.bankaccount.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -292,6 +293,71 @@ class BankAccountServiceTest {
   }
 
   @Test
+  void shouldSaveDepositTransaction() {
+    MoneyRequest request = new MoneyRequest(new BigDecimal("100"), Currency.EUR);
+    when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+
+    bankAccountService.addMoney(1L, request);
+
+    verify(transactionRepository)
+        .save(
+            argThat(
+                tx ->
+                    tx.getType() == TransactionType.DEPOSIT
+                        && tx.getCurrency() == Currency.EUR
+                        && tx.getAmount().compareTo(new BigDecimal("100")) == 0
+                        && tx.getTargetAmount() == null
+                        && tx.getTargetCurrency() == null));
+  }
+
+  @Test
+  void shouldSaveWithdrawalTransaction() {
+    MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
+    BalanceEntity balance = new BalanceEntity();
+    balance.setCurrency(Currency.EUR);
+    balance.setAmount(new BigDecimal("100"));
+    bankAccountEntity.getBalances().add(balance);
+
+    ExternalSystemResponse response = new ExternalSystemResponse(200, "OK");
+    when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
+
+    bankAccountService.withdrawMoney(1L, request);
+
+    verify(transactionRepository)
+        .save(
+            argThat(
+                tx ->
+                    tx.getType() == TransactionType.WITHDRAWAL
+                        && tx.getCurrency() == Currency.EUR
+                        && tx.getAmount().compareTo(new BigDecimal("50")) == 0));
+  }
+
+  @Test
+  void shouldSaveExchangeTransaction() {
+    BalanceEntity fromBalance = new BalanceEntity();
+    fromBalance.setCurrency(Currency.EUR);
+    fromBalance.setAmount(new BigDecimal("100"));
+    bankAccountEntity.getBalances().add(fromBalance);
+
+    when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
+    when(currencyRateService.getRate(Currency.EUR, Currency.USD))
+        .thenReturn(new BigDecimal("1.08"));
+
+    bankAccountService.exchangeCurrency(1L, Currency.EUR, Currency.USD, new BigDecimal("10"));
+
+    verify(transactionRepository)
+        .save(
+            argThat(
+                tx ->
+                    tx.getType() == TransactionType.EXCHANGE
+                        && tx.getCurrency() == Currency.EUR
+                        && tx.getAmount().compareTo(new BigDecimal("10")) == 0
+                        && tx.getTargetCurrency() == Currency.USD
+                        && tx.getTargetAmount().compareTo(new BigDecimal("10.8000")) == 0));
+  }
+
+  @Test
   void shouldGetTransactions() {
     TransactionResponse transactionResponse =
         new TransactionResponse(
@@ -311,5 +377,11 @@ class BankAccountServiceTest {
     List<TransactionResponse> transactions = bankAccountService.getTransactions(1L);
     assertEquals(1, transactions.size());
     assertSame(transactionResponse, transactions.get(0));
+  }
+
+  @Test
+  void getTransactionsShouldThrowWhenAccountNotFound() {
+    when(bankAccountRepository.findById(1L)).thenReturn(Optional.empty());
+    assertThrows(NotFoundException.class, () -> bankAccountService.getTransactions(1L));
   }
 }

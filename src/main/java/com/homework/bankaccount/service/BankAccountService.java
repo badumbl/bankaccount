@@ -5,6 +5,8 @@ import com.homework.bankaccount.entities.BankAccountEntity;
 import com.homework.bankaccount.entities.TransactionEntity;
 import com.homework.bankaccount.enums.Currency;
 import com.homework.bankaccount.enums.TransactionType;
+import com.homework.bankaccount.event.TransactionEvent;
+import com.homework.bankaccount.event.TransactionEventProducer;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
 import com.homework.bankaccount.mapper.BalanceMapper;
@@ -18,6 +20,7 @@ import com.homework.bankaccount.response.TransactionResponse;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -35,6 +38,7 @@ public class BankAccountService {
   private final BalanceMapper balanceMapper;
   private final CurrencyRateService currencyRateService;
   private final TransactionMapper transactionMapper;
+  private final TransactionEventProducer transactionEventProducer;
 
   private BankAccountEntity getBankAccount(Long bankAccountId) {
     return bankAccountRepository
@@ -166,6 +170,17 @@ public class BankAccountService {
     transactionEntity.setTargetAmount(targetAmount);
     transactionEntity.setTargetCurrency(targetCurrency);
     transactionRepository.save(transactionEntity);
+
+    transactionEventProducer.publish(new TransactionEvent(
+            bankAccountEntity.getId(),
+            type,
+            amount,
+            currency,
+            targetAmount,
+            targetCurrency,
+            Instant.now()
+    ));
+
   }
 
   private static BalanceEntity getOrCreateBalance(

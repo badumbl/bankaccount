@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.homework.bankaccount.entities.BankAccountEntity;
 import com.homework.bankaccount.enums.Currency;
-import com.homework.bankaccount.httpclient.ExternalSystemRestClient;
 import com.homework.bankaccount.request.CreateAccountRequest;
 import com.homework.bankaccount.request.CurrencyExchangeRequest;
 import com.homework.bankaccount.request.MoneyRequest;
@@ -29,8 +28,6 @@ class BankAccountControllerTest {
   @Autowired private MockMvc mockMvc;
 
   @MockitoBean private BankAccountService bankAccountService;
-
-  @MockitoBean private ExternalSystemRestClient externalSystemRestClient;
 
   @Autowired private ObjectMapper objectMapper;
 

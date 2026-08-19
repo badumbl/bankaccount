@@ -24,12 +24,6 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
   }
 
-  @ExceptionHandler({ExternalSystemUnavailableException.class})
-  public ResponseEntity<?> handleExternalSystem(ExternalSystemUnavailableException ex) {
-    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-        .body(Map.of("error", ex.getMessage()));
-  }
-
   @ExceptionHandler(Exception.class)
   public ResponseEntity<?> handleOther(Exception ex) {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

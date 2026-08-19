@@ -12,11 +12,9 @@ import com.homework.bankaccount.entities.BankAccountEntity;
 import com.homework.bankaccount.entities.TransactionEntity;
 import com.homework.bankaccount.enums.Currency;
 import com.homework.bankaccount.enums.TransactionType;
-import com.homework.bankaccount.exception.ExternalSystemUnavailableException;
+import com.homework.bankaccount.event.TransactionEventProducer;
 import com.homework.bankaccount.exception.InsufficientFundsException;
 import com.homework.bankaccount.exception.NotFoundException;
-import com.homework.bankaccount.httpclient.ExternalSystemRestClient;
-import com.homework.bankaccount.httpclient.response.ExternalSystemResponse;
 import com.homework.bankaccount.mapper.BalanceMapper;
 import com.homework.bankaccount.mapper.TransactionMapper;
 import com.homework.bankaccount.repository.BalanceRepository;
@@ -42,10 +40,11 @@ class BankAccountServiceTest {
   @Mock private BankAccountRepository bankAccountRepository;
   @Mock private BalanceRepository balanceRepository;
   @Mock private TransactionRepository transactionRepository;
-  @Mock private ExternalSystemRestClient externalSystemRestClient;
   @Mock private BalanceMapper balanceMapper;
   @Mock private CurrencyRateService currencyRateService;
   @Mock private TransactionMapper transactionMapper;
+  @Mock private TransactionEventProducer transactionEventProducer;
+
   @InjectMocks private BankAccountService bankAccountService;
 
   private BankAccountEntity bankAccountEntity;
@@ -122,10 +121,7 @@ class BankAccountServiceTest {
     balance.setAmount(new BigDecimal("100"));
     bankAccountEntity.getBalances().add(balance);
 
-    ExternalSystemResponse response = new ExternalSystemResponse(200, "OK");
-
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
-    when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
     when(transactionRepository.save(any(TransactionEntity.class)))
         .thenReturn(new TransactionEntity());
 
@@ -165,25 +161,6 @@ class BankAccountServiceTest {
 
     assertThrows(
         InsufficientFundsException.class, () -> bankAccountService.withdrawMoney(1L, request));
-  }
-
-  @Test
-  void withdrawMoneyShouldThrowExternalSystemUnavailable() {
-    MoneyRequest request = new MoneyRequest(new BigDecimal("50"), Currency.EUR);
-
-    BalanceEntity balance = new BalanceEntity();
-    balance.setCurrency(Currency.EUR);
-    balance.setAmount(new BigDecimal("100"));
-    bankAccountEntity.getBalances().add(balance);
-
-    ExternalSystemResponse response = new ExternalSystemResponse(500, "Service unavailable");
-
-    when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
-    when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
-
-    assertThrows(
-        ExternalSystemUnavailableException.class,
-        () -> bankAccountService.withdrawMoney(1L, request));
   }
 
   @Test
@@ -318,9 +295,7 @@ class BankAccountServiceTest {
     balance.setAmount(new BigDecimal("100"));
     bankAccountEntity.getBalances().add(balance);
 
-    ExternalSystemResponse response = new ExternalSystemResponse(200, "OK");
     when(bankAccountRepository.findById(1L)).thenReturn(Optional.of(bankAccountEntity));
-    when(externalSystemRestClient.getExternalSystemResponse()).thenReturn(response);
 
     bankAccountService.withdrawMoney(1L, request);
 
